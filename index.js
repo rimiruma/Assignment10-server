@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require('express')
 const cors = require('cors');
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 3000;
 
 // middleware
@@ -31,6 +31,26 @@ async function run() {
 
         const db = client.db('home_db')
         const PropertiesCollection = db.collection('Properties')
+        const usersCollection = db.collection('users');
+        const reviewsCollection = db.collection("reviews");
+
+
+
+        app.post('/users', async (req, res) => {
+            const newUser = req.body;
+            const email = req.body.email;
+            const query = { email: email }
+            const existingUser = await usersCollection.findOne(query)
+            if (existingUser) {
+                res.send({ message: 'user already exits.' })
+            }
+            else {
+                const result = await usersCollection.insertOne(newUser);
+                res.send(result);
+            }
+
+
+        })
 
         // Add properties api
         app.post('/properties', async (req, res) => {
@@ -46,6 +66,91 @@ async function run() {
             const result = await cursor.toArray();
             res.send(result);
         })
+
+        app.get('/properties/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await PropertiesCollection.findOne(query);
+            res.send(result);
+        });
+
+        app.post("/properties", async (req, res) => {
+            const property = req.body;
+
+            property.posted_date = new Date();
+            property.user = {
+                name: user?.name,
+                email: user?.email,
+                photo: user?.photoURL
+            };
+
+            const result = await PropertiesCollection.insertOne(property);
+            res.send(result);
+        });
+
+        // AllProperties api
+        app.get('/properties', async (req, res) => {
+            const cursor = PropertiesCollection.find().sort({ created_at: -1 });
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
+
+
+
+        // review api
+        app.post("/reviews", async (req, res) => {
+            const { propertyId, user, rating, reviewText } = req.body;
+            if (!propertyId || !user || !rating || !reviewText) {
+                return res.status(400).send({ message: "All fields are required" });
+            }
+
+            const newReview = {
+                propertyId,
+                user: {
+                    name: user?.name,
+                    email: user?.email,
+                    photo: user?.photoURL,
+                    created_at: user.created_at || new Date(),
+                },
+                rating,
+                reviewText,
+                createdAt: new Date(),
+            };
+
+            const result = await reviewsCollection.insertOne(newReview);
+            res.send(result);
+        });
+
+        app.get("/reviews-user", async (req, res) => {
+            const email = req.query.email;
+            if (!email) return res.status(400).send({ message: "Email is required" });
+
+            const reviews = await reviewsCollection
+                .find({ "user.email": email })
+                .sort({ createdAt: -1 })
+                .toArray();
+
+                console.log('reviews', reviews);
+                
+            for (let i = 0; i < reviews.length; i++) {
+                const property = await PropertiesCollection.findOne({ _id: new ObjectId(reviews[i].propertyId) });
+                reviews[i].propertyName = property?.name;
+                reviews[i].propertyThumbnail = property?.image;
+            }
+
+            res.send(reviews);
+        });
+
+        app.get("/reviews/:propertyId", async (req, res) => {
+            const { propertyId } = req.params;
+            const reviews = await reviewsCollection
+                .find({ propertyId })
+                .sort({ createdAt: -1 })
+                .toArray();
+            res.send(reviews);
+        });
+
 
 
 
