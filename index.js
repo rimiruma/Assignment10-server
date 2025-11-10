@@ -41,6 +41,13 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/featured-properties', async (req, res) => {
+            const cursor = PropertiesCollection.find().sort({ created_at: -1 }).limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+
 
 
         // Send a ping to confirm a successful connection
