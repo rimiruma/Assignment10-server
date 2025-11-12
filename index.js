@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors');
 const app = express();
+require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 3000;
 
@@ -9,7 +10,7 @@ app.use(cors());
 app.use(express.json())
 
 
-const uri = "mongodb+srv://homedbUser:Cj7crJZ29Eqsaq7Z@cluster0.2o3am.mongodb.net/?appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.2o3am.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -183,33 +184,44 @@ async function run() {
             res.send(result);
         });
 
-        // app.delete("/properties/:id", async (req, res) => {
-        //     const id = req.params.id;
-        //     const result = await PropertiesCollection.deleteOne({ _id: new ObjectId(id) });
-        //     res.send(result);
-        // });
-
-        // update api
+        //  Update Property API
         app.put("/properties/:id", async (req, res) => {
-            try {
-                const id = req.params.id;
-                const updateData = req.body;
+      try {
+        const id = req.params.id;
+        const updateData = req.body;
 
-                if ("created_at" in updateData) {
-                    delete updateData.created_at;
-                }
+        if ("created_at" in updateData) delete updateData.created_at;
 
-                const result = await PropertiesCollection.updateOne(
-                    { _id: new ObjectId(id) },
-                    { $set: updateData }
-                );
+        const result = await PropertiesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateData }
+        );
 
-                res.send(result);
-            } catch (error) {
-                console.error(error);
-                res.status(500).send({ error: "Failed to update property" });
-            }
-        });
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: "Failed to update property" });
+      }
+    });
+
+
+        //  Fetch user’s properties
+            app.get("/properties", async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) return res.status(400).send({ error: "Email required" });
+
+        const properties = await PropertiesCollection.find({
+          email: email.toLowerCase(),
+        }).toArray();
+
+        res.send(properties);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: "Failed to fetch properties" });
+      }
+    });
+
 
 
         app.delete("/properties/:id", async (req, res) => {
