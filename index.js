@@ -89,14 +89,23 @@ async function run() {
         });
 
         // AllProperties api
-        app.get('/properties', async (req, res) => {
-            const cursor = PropertiesCollection.find().sort({ created_at: -1 });
+        app.get("/properties", async (req, res) => {
+            const { sort, search } = req.query;
+
+            let query = {};
+            if (search) {
+                query = { name: { $regex: search, $options: "i" } };
+            }
+
+            let sortOption = {};
+            if (sort === "asc") sortOption = { price: 1 };
+            else if (sort === "desc") sortOption = { price: -1 };
+            else sortOption = { created_at: -1 }; // default: newest first
+
+            const cursor = PropertiesCollection.find(query).sort(sortOption);
             const result = await cursor.toArray();
             res.send(result);
         });
-
-
-
 
         // review api
         app.post("/reviews", async (req, res) => {
@@ -165,7 +174,7 @@ async function run() {
         app.post("/properties", async (req, res) => {
             const property = req.body;
 
-           
+
             if (!property.created_at) {
                 property.created_at = new Date();
             }
