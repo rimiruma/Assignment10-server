@@ -131,8 +131,8 @@ async function run() {
                 .sort({ createdAt: -1 })
                 .toArray();
 
-                console.log('reviews', reviews);
-                
+            console.log('reviews', reviews);
+
             for (let i = 0; i < reviews.length; i++) {
                 const property = await PropertiesCollection.findOne({ _id: new ObjectId(reviews[i].propertyId) });
                 reviews[i].propertyName = property?.name;
@@ -150,6 +150,67 @@ async function run() {
                 .toArray();
             res.send(reviews);
         });
+
+        // my property api
+        app.get("/properties", async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+
+            const result = await PropertiesCollection.find(query).toArray();
+            // console.log('result', query, result);
+
+            res.send(result);
+        });
+
+        app.post("/properties", async (req, res) => {
+            const property = req.body;
+
+           
+            if (!property.created_at) {
+                property.created_at = new Date();
+            }
+
+            const result = await PropertiesCollection.insertOne(property);
+            res.send(result);
+        });
+
+        // app.delete("/properties/:id", async (req, res) => {
+        //     const id = req.params.id;
+        //     const result = await PropertiesCollection.deleteOne({ _id: new ObjectId(id) });
+        //     res.send(result);
+        // });
+
+        // update api
+        app.put("/properties/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const updateData = req.body;
+
+                if ("created_at" in updateData) {
+                    delete updateData.created_at;
+                }
+
+                const result = await PropertiesCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: updateData }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ error: "Failed to update property" });
+            }
+        });
+
+
+        app.delete("/properties/:id", async (req, res) => {
+            const id = req.params.id;
+
+            const result = await PropertiesCollection.deleteOne({ _id: new ObjectId(id) });
+            res.send(result);
+        });
+
+
 
 
 
